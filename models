@@ -1,0 +1,165 @@
+
+import numpy as np
+import pandas as pd
+
+#%matplotlib inline
+import matplotlib.pyplot as plt
+plt.style.use('seaborn-whitegrid')
+
+
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
+from sklearn import preprocessing
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import MinMaxScaler
+
+
+
+bier_data = pd.read_csv("/Users/Karl/Desktop/Bachelorarbeit/bier/bier_data.csv")
+
+bier_data_np = bier_data.to_numpy()
+
+brands = pd.DataFrame({"brand":["milwaukee","heineken","coors","miller","sam","budweiser","keystone","old style",
+             "stroh","toselli","murphy","fuller","amstel","korean imported","woodchuck","grant","michelob","busch","o'doul",
+             "elephant","red wolf","elk mountain","carlsberg","winter brew","natural","guiness","moretti",
+             "cherry rail","red hook","blackhook","ballard","wheat hook","st regis","pabst","big bear","old english",
+             "hamms","summit","pike","zywiec","okocim","tsingtao","magnum","meister brau","leinenkugel",
+             "icehouse","lowenbrau","goose island","dom micro","asahi","kirin","bells","toselli",
+             "pete","clausthaler","new amsterdam","razor's edge","hacker","boulder","schlitz","augsburger",
+             "labatt","tennent","molson","shea","dundee","foster","john courage","colt","rolling rock","blue moon",
+             "herman","killian","zima","castlemaine","whitbread","pilsner urquell","dos equis","moosehead",
+             "schaefer","steinlager","ranier","anchor","buckler","windy city","special export",
+             "carling","kingsbury","champale","carta blanca","moussy","pyramid","santa clauss","woodpecker",
+             "st pauli","pacifico","corona","modelo","peroni","weinhard","naked aspen","cold spring","warsteiner",
+             "dixie","beck","youngs special","duvel","grolsch","sierra nevada","sante","bass ale","country","harp",
+             "kaliber","berghoff","hornby","sutter","black dog","longshot","sapporo","little kings","mcewans",
+             "spaten","franziskaner","point","suntory","ariel","tecate","cooper","swan","double diamond","watney",
+             "bohemia","red river","rogue","dusseldorfer","oregon","legacy","big shoulders","baderbrau",
+             "lezajsk","rhino","beers of the world","devil m","celis","state street","dortmunder","kozel",
+             "shipyard","blue ridge","beer of america"]})       
+
+
+
+
+
+#create dummies for brands
+bier_dummy = pd.get_dummies(bier_data['brand'], drop_first = True, prefix = 'brands')
+
+
+
+#transform  weighted_avg_price to log
+bier_data['weighted_avg_price'] = np.log(bier_data['weighted_avg_price'])
+
+
+#dummy variables for week and store
+week_dummy = pd.get_dummies(bier_data['c_week'], drop_first = True)
+store_dummy = pd.get_dummies(bier_data['store'], drop_first = True)
+
+#merge with old bier data
+bier_merge_with_dummies = pd.concat([bier_data, bier_dummy, week_dummy, store_dummy], axis=1)
+bier_merge_with_dummies.pop('c_week')
+
+
+
+
+
+X = bier_merge_with_dummies.iloc[:,4:]
+#remove move_oz from old df and create own variavble y
+y = bier_merge_with_dummies.pop('move_oz').values
+
+#create log of y
+y = np.log(y)
+
+
+#remove already ecnoded brands from X
+x_scaling = X.iloc[:,:5]
+
+#sclaing of X variable
+scaler = preprocessing.StandardScaler()
+x_scaling = scaler.fit_transform(x_scaling)
+x_scaling = pd.DataFrame(x_scaling)
+
+X_final = pd.concat([x_scaling, bier_dummy], axis=1)
+
+
+# Splitting the dataset into the Training set and Test set
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(X_final, y, test_size = 0.2, random_state = 0)
+
+
+# Fitting Multiple Linear Regression to the Training set
+from sklearn.linear_model import LinearRegression
+regressor = LinearRegression()
+est1 = regressor.fit(X_train, y_train)
+
+# Predicting the Test set results
+y_pred = regressor.predict(X_test)
+
+#error
+from sklearn.metrics import mean_squared_error
+
+mean_squared_error(y_test, y_pred, squared = 'false')
+
+#r^2
+from sklearn.metrics import r2_score
+r2_score(y_test, y_pred)
+
+
+
+from scipy import stats
+
+#results = est1.summary()
+
+
+
+from sklearn import metrics
+print('Linear Regression')
+print('Mean Absolute Error:', metrics.mean_absolute_error(y_test, y_pred))  
+print('Mean Squared Error:', metrics.mean_squared_error(y_test, y_pred))  
+print('Root Mean Squared Error:', np.sqrt(metrics.mean_squared_error(y_test, y_pred)))
+
+
+import statsmodels.api as sm
+model = sm.OLS(y_train, X_train)
+results = model.fit()
+print(results.summary())
+
+
+
+from sklearn import svm
+clf = svm.SVR()
+clf.fit(X_train, y_train)
+y_pred_svr = clf.predict(X_test)
+
+print('Mean Absolute Error:', metrics.mean_absolute_error(y_test, y_pred_svr))  
+print('Mean Squared Error:', metrics.mean_squared_error(y_test, y_pred_svr))  
+print('Root Mean Squared Error:', np.sqrt(metrics.mean_squared_error(y_test, y_pred_svr)))
+
+
+
+#support vector machine
+from sklearn import linear_model
+reg= linear_model.Ridge(alpha = 0.5)
+reg.fit(X_train, y_train)
+y_pred_reg = reg.predict(X_test)
+print('Linear Model')
+print('Mean Absolute Error:', metrics.mean_absolute_error(y_test, y_pred_reg))  
+print('Mean Squared Error:', metrics.mean_squared_error(y_test, y_pred_reg))  
+print('Root Mean Squared Error:', np.sqrt(metrics.mean_squared_error(y_test, y_pred_reg)))
+
+
+from sklearn.tree import DecisionTreeRegressor
+reg= DecisionTreeRegressor()
+reg.fit(X_train, y_train)
+y_pred_dt = reg.predict(X_test)
+
+print('Decision Tree')
+print('Mean Absolute Error:', metrics.mean_absolute_error(y_test, y_pred_dt))  
+print('Mean Squared Error:', metrics.mean_squared_error(y_test, y_pred_dt))  
+print('Root Mean Squared Error:', np.sqrt(metrics.mean_squared_error(y_test, y_pred_dt)))
+
+
+
+import math
