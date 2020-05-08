@@ -61,26 +61,26 @@ bier_merge_with_dummies = pd.concat([bier_data, bier_dummy, week_dummy, store_du
 bier_merge_with_dummies.pop('c_week')
 
 
-
-
-
 X = bier_merge_with_dummies.iloc[:,4:]
 #remove move_oz from old df and create own variavble y
-y = bier_merge_with_dummies.pop('move_oz').values
+y = bier_merge_with_dummies['move_oz']
+
+X = X.iloc[:,1:]
+
 
 #create log of y
 y = np.log(y)
 
 
 #remove already ecnoded brands from X
-x_scaling = X.iloc[:,:5]
+x_scaling = X.iloc[:,:4]
 
 #sclaing of X variable
 scaler = preprocessing.StandardScaler()
 x_scaling = scaler.fit_transform(x_scaling)
 x_scaling = pd.DataFrame(x_scaling)
 
-X_final = pd.concat([x_scaling, bier_dummy], axis=1)
+X_final = pd.concat([x_scaling, bier_dummy, week_dummy, store_dummy], axis=1)
 
 
 # Splitting the dataset into the Training set and Test set
@@ -108,11 +108,8 @@ r2_score(y_test, y_pred)
 
 
 
-from scipy import stats
 
-#results = est1.summary()
-
-
+#different models
 
 from sklearn import metrics
 print('Linear Regression')
@@ -125,19 +122,6 @@ import statsmodels.api as sm
 model = sm.OLS(y_train, X_train)
 results = model.fit()
 print(results.summary())
-
-
-
-from sklearn import svm
-clf = svm.SVR()
-clf.fit(X_train, y_train)
-y_pred_svr = clf.predict(X_test)
-
-print('Mean Absolute Error:', metrics.mean_absolute_error(y_test, y_pred_svr))  
-print('Mean Squared Error:', metrics.mean_squared_error(y_test, y_pred_svr))  
-print('Root Mean Squared Error:', np.sqrt(metrics.mean_squared_error(y_test, y_pred_svr)))
-
-
 
 #support vector machine
 from sklearn import linear_model
@@ -161,5 +145,3 @@ print('Mean Squared Error:', metrics.mean_squared_error(y_test, y_pred_dt))
 print('Root Mean Squared Error:', np.sqrt(metrics.mean_squared_error(y_test, y_pred_dt)))
 
 
-
-import math
